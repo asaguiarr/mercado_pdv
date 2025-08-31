@@ -1,20 +1,29 @@
+// resources/views/pdv/sales.blade.php
+
 @extends('layouts.app')
 
 @section('title', 'Vendas - PDV')
 
 @section('content')
 <div class="container mt-4">
-
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">📊 Vendas Realizadas</h5>
-            <!-- Botão abrir modal -->
-            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#newSaleModal">
+            <a href="{{ route('pdv.create') }}" class="btn btn-success btn-sm">
                 <i class="bi bi-plus-circle"></i> Nova Venda
-            </button>
+            </a>
         </div>
 
         <div class="card-body">
+            <form action="{{ route('pdv.sales') }}" method="GET" class="mb-4">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Buscar por cliente ou ID" value="{{ request()->input('search') }}">
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+
             @if($sales->count())
                 <table class="table table-hover">
                     <thead>
@@ -40,3 +49,14 @@
                                     <i class="bi bi-eye"></i> Detalhes
                                 </a>
                             </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <p class="text-muted">Nenhuma venda encontrada.</p>
+            @endif
+        </div>
+    </div>
+</div>
+@endsection

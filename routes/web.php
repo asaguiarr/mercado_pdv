@@ -39,9 +39,8 @@ Route::middleware('auth')->group(function () {
     // PDV (Ponto de Venda)
     // ------------------------
     Route::prefix('pdv')->name('pdv.')->group(function () {
-
         // Página principal de vendas
-        Route::get('/', [PdvController::class, 'listSales'])->name('sales');
+        Route::get('/', [PdvController::class, 'index'])->name('sales');
 
         // Criar nova venda (formulário)
         Route::get('create', [PdvController::class, 'create'])->name('create');
@@ -49,7 +48,7 @@ Route::middleware('auth')->group(function () {
         // Processar venda
         Route::post('sale', [PdvController::class, 'processSale'])->name('sale');
 
-        // Produtos para o PDV (lista AJAX)
+        // Produtos para o PDV (AJAX)
         Route::get('products', [PdvController::class, 'getProducts'])->name('products');
         Route::get('products/{id}', [PdvController::class, 'getProduct'])->name('products.show');
     });

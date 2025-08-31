@@ -1,4 +1,5 @@
-<!-- resources/views/pdv/index.blade.php -->
+// resources/views/pdv/index.blade.php
+
 @extends('layouts.app')
 
 @section('title', 'PDV')
@@ -72,14 +73,24 @@
                         <p class="fw-bold fs-5">Total: R$ <span id="total">0,00</span></p>
                     </div>
 
+                    <!-- CLIENTE -->
+                    <div class="mt-3">
+                        <label for="customer" class="form-label">Cliente</label>
+                        <select id="customer" class="form-select">
+                            @foreach($customers as $customer)
+                                <option value="{{ $customer->id }}">{{ $customer->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <!-- PAGAMENTO -->
                     <div class="mt-3">
                         <label for="payment-method" class="form-label">Forma de Pagamento</label>
                         <select id="payment-method" class="form-select">
-                            <option value="dinheiro">💵 Dinheiro</option>
-                            <option value="cartao">💳 Cartão</option>
-                            <option value="pix">⚡ PIX</option>
-                            <option value="misto">🔀 Misto</option>
+                            <option value="dinheiro"> Dinheiro</option>
+                            <option value="cartao"> Cartão</option>
+                            <option value="pix"> PIX</option>
+                            <option value="misto"> Misto</option>
                         </select>
                     </div>
 
@@ -202,6 +213,7 @@ $('#finalize-sale').on('click', function() {
 $('#confirmFinalize').on('click', function() {
     $.post('{{ route('pdv.sale') }}', {
         cart: cart,
+        customer_id: $('#customer').val(),
         payment_method: $('#payment-method').val(),
         discount: $('#discount').val(),
         _token: '{{ csrf_token() }}'
@@ -210,6 +222,7 @@ $('#confirmFinalize').on('click', function() {
         updateCart();
         bootstrap.Modal.getInstance(document.getElementById('confirmSaleModal')).hide();
         alert('Venda finalizada com sucesso!');
+        loadProducts(); // Atualiza lista após venda
     });
 });
 </script>
