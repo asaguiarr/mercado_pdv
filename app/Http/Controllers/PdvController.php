@@ -1,46 +1,77 @@
 <?php
 
-// app/Http/Controllers/PDVController.php
-
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
-use Illuminate\Http\Request;
+use App\Models\Product;
 
-class PDVController extends Controller
+public function processSale(Request $request)
 {
-    /**
-     * Lista as vendas realizadas no PDV com paginação.
-     */
-    public function listSales(Request $request)
-    {
-        // Carrega vendas já com os relacionamentos principais
-        $query = Sale::with(['items.product', 'user', 'customer'])
-            ->orderBy('id', 'desc');
+    // 🔹 Validação inicial dos dados da requisição
+    $request->validate([
+        'cart' => 'required|array|min:1',       // carrinho precisa ter pelo menos 1 item
+        'payment_method' => 'required|string', // ex: dinheiro, pix, cartão
+        'discount' => 'required|numeric|min:0',
+        'customer_id' => 'nullable|exists:customers,id'
+    ]);
 
-        // 🔹 Filtro por forma de pagamento
-        if ($request->filled('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
+    DB::beginTransaction(); // 🔒 Inicia a transação para consistência
+
+    try {
+        // 🔹 Criação da venda inicial
+        $sale = Sale::create([
+            'user_id' => auth()->id(),              // usuário logado
+            'customer_id' => $request->customer_id, // cliente pode ser opcional
+            'payment_method' => $request->payment_method,
+            'discount' => $request->discount,
+            'total' => 0 // será atualizado depois
+        ]);
+
+        $total = 0;
+
+        // 🔹 Itera sobre o carrinho de compras
+        foreach ($request->cart as $item) {
+            $product = Product::findOrFail($item['product_id']);
+
+            // ✅ Valida estoque
+            if ($product->stock < $item['quantity']) {
+                throw new \Exception("Estoque insuficiente para o produto {$product->name}");
+            }
+
+            // calcula subtotal
+            $subtotal = $product->price * $item['quantity'];
+            $total += $subtotal;
+
+            // 🔹 Cria o item da venda
+            $sale->items()->create([
+                'product_id' => $product->id,
+                'quantity'   => $item['quantity'],
+                'price'      => $product->price,
+                'subtotal'   => $subtotal,
+            ]);
+
+            // 🔹 Atualiza o estoque do produto
+            $product->decrement('stock', $item['quantity']);
         }
 
-        // 🔹 Filtro por período (início/fim)
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('created_at', [$request->start_date, $request->end_date]);
-        }
+        // 🔹 Aplica desconto e atualiza o total da venda
+        $finalTotal = max($total - $request->discount, 0); // nunca pode ser negativo
+        $sale->update(['total' => $finalTotal]);
 
-        $sales = $query->paginate(10);
+        DB::commit(); // ✅ Confirma a transação
 
-        return view('pdv.sales', compact('sales'));
-    }
+        // 🔹 Retorna a venda processada com detalhes
+        return response()->json([
+            'message' => 'Venda processada com sucesso!',
+            'sale' => $sale->load(['items.product', 'customer', 'user'])
+        ], 201);
 
-    /**
-     * Exibe os detalhes de uma venda específica.
-     */
-    public function show($id)
-    {
-        $sale = Sale::with(['items.product', 'user', 'customer'])->findOrFail($id);
-
-        return view('pdv.show', compact('sale'));
+    } catch (\Exception $e) {
+        DB::rollBack(); // ❌ Cancela tudo se der erro
+        return response()->json([
+            'error' => 'Erro ao processar a venda',
+            'details' => $e->getMessage()
+        ], 500);
     }
 
     public function processSale(Request $request)
