@@ -112,3 +112,17 @@ class PdvController extends Controller
         return response()->json($product);
     }
 }
+// app/Http/Controllers/PdvController.php
+
+public function processSale(Request $request)
+{
+    // ...
+
+    $sale = Sale::create([
+        'customer_id' => $request->customer_id,
+        'payment_method' => $request->payment_method,
+        'total' => $total,
+    ]);
+
+    // ...
+}
