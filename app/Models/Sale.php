@@ -11,19 +11,25 @@ class Sale extends Model
 
     protected $fillable = [
         'user_id',
+        'customer_id',
         'total',
         'payment_method',
+        'cash_received',
+        'cash_change',
     ];
 
-    // Relacionamento: uma venda tem vários itens
     public function items()
     {
         return $this->hasMany(SaleItem::class);
     }
 
-    // Relacionamento: usuário que fez a venda (atendente)
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

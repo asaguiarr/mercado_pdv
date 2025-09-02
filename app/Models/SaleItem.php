@@ -13,17 +13,14 @@ class SaleItem extends Model
         'sale_id',
         'product_id',
         'quantity',
-        'unit_price',
-        'subtotal',
+        'price',
     ];
 
-    // Relacionamento: pertence a uma venda
     public function sale()
     {
         return $this->belongsTo(Sale::class);
     }
 
-    // Relacionamento: pertence a um produto
     public function product()
     {
         return $this->belongsTo(Product::class);
