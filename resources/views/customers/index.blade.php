@@ -1,4 +1,5 @@
-{{-- resources/views/customers/index.blade.php --}}
+// resources/views/customers/index.blade.php
+
 @extends('layouts.app')
 
 @section('title', 'Clientes')
@@ -63,7 +64,7 @@
                                     <th class="text-center">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="customerTableBody">
                                 @forelse($customers as $customer)
                                     <tr>
                                         <td>
@@ -112,24 +113,22 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted py-4">
-                                            <i class="fas fa-info-circle me-1"></i> Nenhum cliente cadastrado ainda.
+                                        <td colspan="9" class="text-center py-4 text-muted">
+                                            <i class="fas fa-info-circle me-2"></i> Nenhum cliente encontrado.
                                         </td>
                                     </tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
-
-                    {{-- Paginação estilizada --}}
-                    @if ($customers->hasPages())
-                        <div class="d-flex justify-content-center my-3">
-                            {{ $customers->links('vendor.pagination.bootstrap-5') }}
-                        </div>
-                    @endif
                 </div>
-            </div>
 
+                @if($customers instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                    <div class="card-footer bg-white d-flex justify-content-center">
+                        {{ $customers->appends(request()->query())->links('pagination::bootstrap-5') }}
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 </div>

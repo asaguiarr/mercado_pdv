@@ -10,7 +10,7 @@
 </div>
 
 <div class="row g-4 mb-4">
-    **@foreach($data['cards'] as $card)**
+    @foreach($data['cards'] as $card)
     <div class="col-md-6 col-lg-3">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body d-flex justify-content-between align-items-center">
@@ -24,7 +24,7 @@
             </div>
         </div>
     </div>
-    **@endforeach**
+    @endforeach
 </div>
 
 <div class="card border-0 shadow-sm mb-4">
@@ -38,9 +38,9 @@
     <div class="card-body">
         <h5 class="fw-semibold mb-4">⚠️ Produtos com Estoque Baixo</h5>
         
-        **@if($data['lowStockProducts']->isEmpty())**
+        @if($data['lowStockProducts']->isEmpty())
             <p class="text-muted text-center my-4">Nenhum produto com estoque baixo 🎉</p>
-        **@else**
+        @else
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
@@ -50,7 +50,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        **@foreach($data['lowStockProducts'] as $product)**
+                        @foreach($data['lowStockProducts'] as $product)
                         <tr>
                             <td class="fw-medium">{{ $product->name }}</td>
                             <td>
@@ -59,11 +59,11 @@
                                 </span>
                             </td>
                         </tr>
-                        **@endforeach**
+                        @endforeach
                     </tbody>
                 </table>
             </div>
-        **@endif**
+        @endif
     </div>
 </div>
 

@@ -1,5 +1,7 @@
 <?php
 
+// routes/web.php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -51,6 +53,10 @@ Route::middleware('auth')->group(function () {
         // Produtos para o PDV (AJAX)
         Route::get('products', [PdvController::class, 'getProducts'])->name('products');
         Route::get('product/{id}', [PdvController::class, 'getProduct'])->name('product.show');
+
+        // Abrir caixa
+        Route::get('open-cash', [PdvController::class, 'openCash'])->name('open-cash');
+        Route::post('open-cash', [PdvController::class, 'openCashStore'])->name('open-cash.store');
     });
 });
 
