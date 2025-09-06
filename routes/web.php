@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
 
         // Produtos para o PDV (AJAX)
         Route::get('products', [PdvController::class, 'getProducts'])->name('products');
-        Route::get('products/{id}', [PdvController::class, 'getProduct'])->name('products.show');
+        Route::get('product/{id}', [PdvController::class, 'getProduct'])->name('product.show');
     });
 });
 

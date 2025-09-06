@@ -1,9 +1,11 @@
 <?php
+// app/Http/Controllers/PdvController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use App\Models\Product;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,9 +25,9 @@ class PdvController extends Controller
      */
     public function create()
     {
-        // Exemplo: você pode carregar clientes e produtos para o form
         $products = Product::all();
-        return view('pdv.create', compact('products'));
+        $customers = Customer::all();
+        return view('pdv.create', compact('products', 'customers'));
     }
 
     /**
@@ -35,7 +37,7 @@ class PdvController extends Controller
     {
         $request->validate([
             'cart' => 'required|array|min:1',
-            'payment_method' => 'required|string',
+            'payment_method' => 'required|string|in:dinheiro,cartao,pix,misto',
             'discount' => 'required|numeric|min:0',
             'customer_id' => 'nullable|exists:customers,id',
         ]);
@@ -43,7 +45,6 @@ class PdvController extends Controller
         DB::beginTransaction();
 
         try {
-            // Criar a venda
             $sale = Sale::create([
                 'user_id' => auth()->id(),
                 'customer_id' => $request->customer_id,
@@ -71,7 +72,6 @@ class PdvController extends Controller
                     'subtotal'   => $subtotal,
                 ]);
 
-                // Atualiza estoque
                 $product->decrement('stock', $item['quantity']);
             }
 
@@ -97,9 +97,14 @@ class PdvController extends Controller
     /**
      * Listagem de produtos para o PDV (ex: AJAX)
      */
-    public function getProducts()
+    public function getProducts(Request $request)
     {
-        $products = Product::select('id', 'name', 'price', 'stock')->get();
+        $search = $request->input('search');
+        $products = Product::where('name', 'like', "%{$search}%")
+            ->orWhere('id', 'like', "%{$search}%")
+            ->select('id', 'name', 'price', 'stock')
+            ->get();
+
         return response()->json($products);
     }
 
@@ -111,18 +116,4 @@ class PdvController extends Controller
         $product = Product::select('id', 'name', 'price', 'stock')->findOrFail($id);
         return response()->json($product);
     }
-}
-// app/Http/Controllers/PdvController.php
-
-public function processSale(Request $request)
-{
-    // ...
-
-    $sale = Sale::create([
-        'customer_id' => $request->customer_id,
-        'payment_method' => $request->payment_method,
-        'total' => $total,
-    ]);
-
-    // ...
 }
