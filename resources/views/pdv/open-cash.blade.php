@@ -1,5 +1,3 @@
-// resources/views/pdv/open-cash.blade.php
-
 @extends('layouts.app')
 
 @section('title', 'Abrir Caixa')

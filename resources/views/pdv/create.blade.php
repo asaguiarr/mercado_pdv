@@ -1,4 +1,3 @@
-// resources/views/pdv/create.blade.php
 
 @extends('layouts.app')
 
@@ -25,7 +24,7 @@
                 <label for="product_id">Produto</label>
                 <select id="product_id" class="form-select">
                     @foreach($products as $product)
-                        <option value="{{ $product->id }}">{{ $product->name }} (R$ {{ number_format($product->price, 2, ',', '.') }})</option>
+                        <option value="{{ $product->id }}">{{ $product->name }} (R$ {{ number_format($product->sale_price, 2, ',', '.') }})</option>
                     @endforeach
                 </select>
             </div>
@@ -72,6 +71,41 @@
 
             <button id="finalize-sale" class="btn btn-primary">Finalizar Venda</button>
             <a href="{{ route('pdv.sales') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </div>
+
+    {{-- Modal de Pagamento --}}
+    <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="paymentModalLabel">Confirmar Pagamento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Total:</strong> R$ <span id="modal-total">0.00</span></p>
+                    <p><strong>Desconto:</strong> R$ <span id="modal-discount">0.00</span></p>
+                    <p><strong>Total a Pagar:</strong> R$ <span id="modal-final-total">0.00</span></p>
+                    <div class="mb-3">
+                        <label for="modal-payment-method" class="form-label">Forma de Pagamento</label>
+                        <select id="modal-payment-method" class="form-select" required>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="cartao">Cartão</option>
+                            <option value="pix">Pix</option>
+                            <option value="misto">Misto</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="change-section" style="display: none;">
+                        <label for="received-amount" class="form-label">Valor Recebido</label>
+                        <input type="number" id="received-amount" class="form-control" step="0.01" min="0">
+                        <p><strong>Troco:</strong> R$ <span id="change-amount">0.00</span></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="confirm-payment" class="btn btn-primary">Confirmar Pagamento</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

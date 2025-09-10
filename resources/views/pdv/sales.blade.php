@@ -1,4 +1,4 @@
-// resources/views/pdv/sales.blade.php
+
 
 @extends('layouts.app')
 
@@ -9,7 +9,7 @@
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">📊 Vendas Realizadas</h5>
-            <a href="{{ route('pdv.create') }}" class="btn btn-success btn-sm">
+            <a href="{{ route('pdv.sales.create') }}" class="btn btn-success btn-sm">
                 <i class="bi bi-plus-circle"></i> Nova Venda
             </a>
         </div>

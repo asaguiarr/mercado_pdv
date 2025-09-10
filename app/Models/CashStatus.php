@@ -1,6 +1,6 @@
-
 <?php
 // app/Models/CashStatus.php
+
 
 namespace App\Models;
 

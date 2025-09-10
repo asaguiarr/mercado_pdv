@@ -1,5 +1,3 @@
-// resources/views/pdv/index.blade.php
-
 @extends('layouts.app')
 
 @section('title', 'PDV')
@@ -8,7 +6,7 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-lg-12">
-            <h1 class="mb-4">Nova Venda</h1>
+            <h1 class="mb-4">Caixa Livre</h1>
 
             <form action="{{ route('pdv.sale') }}" method="POST">
                 @csrf

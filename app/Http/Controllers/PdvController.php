@@ -1,23 +1,37 @@
 <?php
-// app/Http/Controllers/PdvController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\Product;
 use App\Models\Customer;
 use App\Models\CashStatus;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PdvController extends Controller
 {
     /**
-     * Página inicial do PDV → lista de vendas
+     * Página inicial do PDV → lista de vendas com paginação
      */
-    public function index()
+    public function index(Request $request)
     {
-        $sales = Sale::with(['customer', 'user'])->latest()->get();
+        $query = Sale::with(['customer', 'user']);
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function ($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $sales = $query->latest()->paginate(15);
         return view('pdv.sales', compact('sales'));
     }
 
@@ -26,10 +40,9 @@ class PdvController extends Controller
      */
     public function create()
     {
-        // Verificar se o caixa está aberto
-        $cashStatus = CashStatus::where('user_id', auth()->id())->first();
+        $cashStatus = CashStatus::where('user_id', auth()->id())->where('status', 'open')->first();
 
-        if (!$cashStatus || $cashStatus->status != 'open') {
+        if (!$cashStatus) {
             return redirect()->route('pdv.open-cash')->with('error', 'Caixa não está aberto');
         }
 
@@ -43,10 +56,9 @@ class PdvController extends Controller
      */
     public function processSale(Request $request)
     {
-        // Verificar se o caixa está aberto
-        $cashStatus = CashStatus::where('user_id', auth()->id())->first();
+        $cashStatus = CashStatus::where('user_id', auth()->id())->where('status', 'open')->first();
 
-        if (!$cashStatus || $cashStatus->status != 'open') {
+        if (!$cashStatus) {
             return response()->json([
                 'error' => 'Caixa não está aberto',
             ], 403);
@@ -73,7 +85,11 @@ class PdvController extends Controller
             $total = 0;
 
             foreach ($request->cart as $item) {
-                $product = Product::findOrFail($item['product_id']);
+                $product = Product::where('id', $item['product_id'])->lockForUpdate()->first();
+
+                if (!$product) {
+                    throw new \Exception("Produto não encontrado");
+                }
 
                 if ($product->stock < $item['quantity']) {
                     throw new \Exception("Estoque insuficiente para o produto {$product->name}");
@@ -84,12 +100,21 @@ class PdvController extends Controller
 
                 $sale->items()->create([
                     'product_id' => $product->id,
-                    'quantity'   => $item['quantity'],
-                    'price'      => $product->price,
-                    'subtotal'   => $subtotal,
+                    'quantity' => $item['quantity'],
+                    'price' => $product->price,
+                    'subtotal' => $subtotal,
                 ]);
 
                 $product->decrement('stock', $item['quantity']);
+
+                // Registrar movimentação de saída
+                StockMovement::create([
+                    'product_id' => $product->id,
+                    'user_id' => auth()->id(),
+                    'type' => 'saida',
+                    'quantity' => $item['quantity'],
+                    'reason' => 'Venda realizada',
+                ]);
             }
 
             $finalTotal = max($total - $request->discount, 0);
@@ -104,6 +129,7 @@ class PdvController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Erro ao processar venda', ['error' => $e->getMessage(), 'user_id' => auth()->id()]);
             return response()->json([
                 'error' => 'Erro ao processar a venda',
                 'details' => $e->getMessage(),
@@ -116,10 +142,9 @@ class PdvController extends Controller
      */
     public function openCash()
     {
-        // Verificar se o caixa já está aberto
-        $cashStatus = CashStatus::where('user_id', auth()->id())->first();
+        $cashStatus = CashStatus::where('user_id', auth()->id())->where('status', 'open')->first();
 
-        if ($cashStatus && $cashStatus->status == 'open') {
+        if ($cashStatus) {
             return redirect()->route('pdv.sales')->with('error', 'Caixa já está aberto');
         }
 
@@ -131,9 +156,11 @@ class PdvController extends Controller
      */
     public function openCashStore(Request $request)
     {
-        // Abrir o caixa
-        $cashStatus = new CashStatus();
-        $cashStatus->user_id = auth()->id();
+        $request->validate([
+            'initial_balance' => 'required|numeric|min:0',
+        ]);
+
+        $cashStatus = CashStatus::firstOrNew(['user_id' => auth()->id(), 'status' => 'open']);
         $cashStatus->initial_balance = $request->input('initial_balance');
         $cashStatus->status = 'open';
         $cashStatus->save();
@@ -141,5 +168,91 @@ class PdvController extends Controller
         return redirect()->route('pdv.sales')->with('success', 'Caixa aberto com sucesso');
     }
 
-    // ...
+    /**
+     * Listagem de produtos para o PDV (via AJAX / busca)
+     */
+    public function getProducts(Request $request)
+    {
+        $search = $request->input('search');
+
+        $products = Product::when($search, function ($query, $search) {
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+        })->limit(50)->get();
+
+        return response()->json($products);
+    }
+
+    /**
+     * Buscar produto específico por ID
+     */
+    public function getProduct($id)
+    {
+        $product = Product::findOrFail($id);
+        return response()->json($product);
+    }
+
+    /**
+     * Detalhes da venda
+     */
+    public function show($id)
+    {
+        $sale = Sale::with(['items.product', 'customer', 'user'])->findOrFail($id);
+        return view('pdv.show', compact('sale'));
+    }
+
+    /**
+     * Fechar caixa (formulário)
+     */
+    public function closeCash()
+    {
+        $cashStatus = CashStatus::where('user_id', auth()->id())->where('status', 'open')->first();
+
+        if (!$cashStatus) {
+            return redirect()->route('pdv.sales')->with('error', 'Nenhum caixa aberto encontrado');
+        }
+
+        return view('pdv.close-cash', compact('cashStatus'));
+    }
+
+    /**
+     * Fechar caixa (processamento)
+     */
+    public function closeCashStore(Request $request)
+    {
+        $request->validate([
+            'closing_balance' => 'required|numeric|min:0',
+        ]);
+
+        $cashStatus = CashStatus::where('user_id', auth()->id())->where('status', 'open')->first();
+
+        if (!$cashStatus) {
+            return redirect()->route('pdv.sales')->with('error', 'Nenhum caixa aberto encontrado');
+        }
+
+        $cashStatus->status = 'closed';
+        $cashStatus->closing_balance = $request->input('closing_balance');
+        $cashStatus->save();
+
+        return redirect()->route('pdv.sales')->with('success', 'Caixa fechado com sucesso');
+    }
+
+    /**
+     * Relatório de vendas
+     */
+    public function report(Request $request)
+    {
+        $query = Sale::with(['customer', 'user']);
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('created_at', [
+                $request->start_date . " 00:00:00",
+                $request->end_date . " 23:59:59"
+            ]);
+        }
+
+        $sales = $query->latest()->paginate(50);
+
+        return view('pdv.report', compact('sales'));
+    }
 }
